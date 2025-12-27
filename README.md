@@ -257,9 +257,9 @@ DNSspoofer is powerful, but there are **important limitations** to keep in mind:
 
     * Browsers and apps may use:
 
-    * `8.8.8.8`
-    * `1.1.1.1`
-    * Built‑in DoH endpoints
+        * `8.8.8.8`
+        * `1.1.1.1`
+        * Built‑in DoH endpoints
     * Even with MITM, they might **pin certs** or retry encrypted DNS.
 
     > Aggressive mode helps here, but only if traffic actually hits port 53.
