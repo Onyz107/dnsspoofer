@@ -25,6 +25,9 @@ func GetPacketChan(ctx context.Context, nfq *nfqueue.Nfqueue, queue uint16) (<-c
 
 		select {
 		case packetCh <- pkt:
+		case <-ctx.Done():
+			nfq.SetVerdict(pkt.PacketID, nfqueue.NfAccept)
+			return 0
 		default:
 			logger.Logger.Warn("packet channel full, dropping packet")
 			nfq.SetVerdict(pkt.PacketID, nfqueue.NfDrop)
