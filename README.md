@@ -73,16 +73,16 @@ sudo ./dnsspoofer --interface eth0 --hosts /path/to/hosts.txt [--ip-mode ipv4|ip
 
 ## IP Modes
 
-* `ipv4` — Spoof only DNS packets that are sent over IPv4.
-* `ipv6` — Spoof only DNS packets that are sent over IPv6.
-* `ipv4+ipv6` — Spoof both.
+* `ipv4`: Spoof only DNS packets that are sent over IPv4.
+* `ipv6`: Spoof only DNS packets that are sent over IPv6.
+* `ipv4+ipv6`: Spoof both.
 
 ---
 
 ## Scope
 
-* `local` — Spoof only packets from the local machine.
-* `remote` — Spoof packets from other machines on the network (MITM scenarios).
+* `local`: Spoof only packets from the local machine.
+* `remote`: Spoof packets from other machines on the network (MITM scenarios).
 
 ---
 
@@ -296,6 +296,59 @@ DNSspoofer is powerful, but there are **important limitations** to keep in mind:
 * You are not in a MITM position
 * The client is using DoH / DoT
 * IPv6 is resolving instead of IPv4
+
+---
+
+## Working Around DoH / DoT
+
+DNSspoofer cannot directly intercept **DNS‑over‑HTTPS (DoH)** or **DNS‑over‑TLS (DoT)**, since those protocols encrypt DNS traffic and avoid UDP port 53 entirely.
+
+However, there is a **pragmatic but unreliable workaround** that may work in some environments.
+
+### The Idea
+
+Most browsers and systems hardcode a list of known DoH / DoT provider hostnames, such as:
+
+* `dns.google`
+* `cloudflare-dns.com`
+* `mozilla.cloudflare-dns.com`
+* `dns.quad9.net`
+
+If these endpoints are **unreachable or fail repeatedly**, some clients will **fallback to classic DNS (UDP/53)**.
+
+### The Hack
+
+You can add known DoH/DoT provider hostnames to your hosts file and redirect them to:
+
+* Your own machine
+* A non-routable IP
+* An IP that intentionally drops traffic
+
+Example:
+
+```
+0.0.0.0 dns.google
+0.0.0.0 cloudflare-dns.com
+0.0.0.0 mozilla.cloudflare-dns.com
+0.0.0.0 dns.quad9.net
+```
+
+Once the browser fails to reach its DoH endpoint multiple times, it *may* fallback to the system resolver, at which point DNSspoofer can intercept traffic normally.
+
+---
+
+### Important Warnings
+
+This approach is **not reliable** and **not universal**:
+
+* Some browsers **never fallback** (or only after restart)
+* Some cache DoH failures aggressively
+* Some apps pin IPs or certificates
+* Future updates may remove fallback entirely
+
+This is **not a real DoH bypass**, just a **behavioral downgrade attack** that depends on client implementation details.
+
+> Treat this as a convenience trick, not a core feature.
 
 ---
 
