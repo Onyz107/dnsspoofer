@@ -13,7 +13,6 @@ func GetPacketChan(ctx context.Context, nfq *nfqueue.Nfqueue, queue uint16) (<-c
 
 	handler := func(attr nfqueue.Attribute) int {
 		if attr.PacketID == nil || attr.Payload == nil {
-			nfq.SetVerdict(*attr.PacketID, nfqueue.NfAccept)
 			return 0
 		}
 
