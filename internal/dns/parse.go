@@ -45,6 +45,10 @@ func ParsePacket(pkt nfqueue.Packet) (*ParsedPacket, error) {
 	var ipv6 *layers.IPv6
 	udp := udpLayer.(*layers.UDP)
 	dns := dnsLayer.(*layers.DNS)
+	if len(dns.Questions) == 0 {
+		logger.Logger.Debug("malformed DNS layer", "payload", pkt.Payload)
+		return nil, ErrInvalidDNSLayer
+	}
 	switch ipVersion {
 	case 4:
 		ipv4 = ipLayer.(*layers.IPv4)
