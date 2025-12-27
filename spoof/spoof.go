@@ -3,8 +3,6 @@ package spoof
 import (
 	"context"
 	"errors"
-	"math/rand/v2"
-	"time"
 
 	"github.com/Onyz107/dnsspoofer/internal/dns"
 	"github.com/Onyz107/dnsspoofer/internal/logger"
@@ -155,9 +153,6 @@ func DNS(ctx context.Context, queue uint16, hosts *wildhosts.Hosts) error {
 				nfq.SetVerdict(pkt.PacketID, gonfqueue.NfDrop)
 				continue
 			}
-
-			jitter := time.Duration(rand.NormFloat64()*10+20) * time.Millisecond
-			time.Sleep(jitter)
 
 			// if newBytes is nil and there is no error forward the packet as-is
 			if newBytes == nil {
