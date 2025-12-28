@@ -8,7 +8,7 @@ import (
 	"github.com/Onyz107/dnsspoofer/internal/logger"
 	"github.com/Onyz107/dnsspoofer/internal/nfqueue"
 	"github.com/Onyz107/dnsspoofer/internal/wildhosts"
-	gonfqueue "github.com/florianl/go-nfqueue"
+	gonfqueue "github.com/florianl/go-nfqueue/v2"
 	"github.com/google/gopacket"
 	"golang.org/x/sys/unix"
 )
@@ -130,7 +130,7 @@ func DNS(ctx context.Context, queue uint16, hosts *wildhosts.Hosts) error {
 		Copymode:     gonfqueue.NfQnlCopyPacket,
 		Flags:        gonfqueue.NfQaCfgFlagFailOpen,
 		AfFamily:     unix.AF_UNSPEC,
-		Logger:       logger.Logger.StandardLog(),
+		Logger:       logger.Logger,
 	})
 	if err != nil {
 		return errors.Join(ErrOpenNFQUEUE, err)

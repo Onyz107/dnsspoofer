@@ -5,7 +5,7 @@ go 1.25.4
 require (
 	github.com/charmbracelet/log v0.4.2
 	github.com/common-nighthawk/go-figure v0.0.0-20210622060536-734e95fb86be
-	github.com/florianl/go-nfqueue v1.3.2
+	github.com/florianl/go-nfqueue/v2 v2.0.2
 	github.com/google/gopacket v1.1.19
 	github.com/google/nftables v0.3.0
 	github.com/google/uuid v1.6.0
@@ -35,5 +35,5 @@ require (
 	github.com/xrash/smetrics v0.0.0-20240521201337-686a1a2994c1 // indirect
 	golang.org/x/exp v0.0.0-20231006140011-7918f672742d // indirect
 	golang.org/x/net v0.33.0 // indirect
-	golang.org/x/sync v0.6.0 // indirect
+	golang.org/x/sync v0.7.0 // indirect
 )
