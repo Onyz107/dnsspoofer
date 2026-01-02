@@ -98,7 +98,6 @@ sudo ./dnsspoofer --interface eth0 --hosts /path/to/hosts.txt [--ip-mode ipv4|ip
 * Uses `nftables` to redirect DNS packets to NFQUEUE.
 * Intercepts packets via `go-nfqueue` and parses them using `gopacket`.
 * Supports wildcard host matching and multiple IPs per hostname.
-* Packet handling includes checksum recomputation and optional jitter to mimic natural traffic.
 
 ---
 
@@ -206,7 +205,7 @@ Client ──▶ FORWARD ──▶ NFQUEUE ──▶ Router ──▶ Internet
 | Local testing    | Aggressive       |
 | Replace resolver | Aggressive       |
 
-If you’re doing MITM and using aggressive mode **you’re doing it wrong** unless you *want* to be noisy for some reason.
+If you’re doing MITM you probably should use passive mode, unless you know what you are doing.
 
 ---
 
@@ -253,7 +252,7 @@ DNSspoofer is powerful, but there are **important limitations** to keep in mind:
 
 
 
-6. **Hardcoded resolvers reduce effectiveness**
+6. **Encrypted DNS breaks spoofing (Again)**
 
     * Browsers and apps may use:
 
