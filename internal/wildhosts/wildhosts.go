@@ -97,19 +97,13 @@ func (h *Hosts) Lookup(hostname string) []net.IP {
 	return out
 }
 
-// LookupFirst returns the first IP that matchs the provided hostname (case-insensitive).
-// The hostname supplied should be a plain hostname like "ads.doubleclick.net".
-func (h *Hosts) LookupFirst(hostname string) net.IP {
-	for _, e := range h.Entries {
-		ok, _ := path.Match(e.Pattern, strings.ToLower(hostname))
-		if ok {
-			return e.IP
-		}
+func (h *Hosts) Map() map[string][]net.IP {
+	out := make(map[string][]net.IP)
+	if h == nil {
+		return out
 	}
-	return nil
-}
-
-// HasHostname returns true if any entry matches the hostname.
-func (h *Hosts) HasHostname(hostname string) bool {
-	return h.LookupFirst(hostname) != nil
+	for _, e := range h.Entries {
+		out[e.Pattern] = append(out[e.Pattern], e.IP)
+	}
+	return out
 }

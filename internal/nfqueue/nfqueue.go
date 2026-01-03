@@ -8,7 +8,7 @@ import (
 	"github.com/florianl/go-nfqueue/v2"
 )
 
-func GetPacketChan(ctx context.Context, nfq *nfqueue.Nfqueue, queue uint16) (<-chan Packet, error) {
+func GetPacketChan(ctx context.Context, nfq *nfqueue.Nfqueue) (<-chan Packet, error) {
 	packetCh := make(chan Packet, 1024)
 
 	handler := func(attr nfqueue.Attribute) int {

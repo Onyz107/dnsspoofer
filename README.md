@@ -1,7 +1,12 @@
 
 # DNSspoofer
 
-A reliable and configurable DNS spoofing tool written in Go, capable of intercepting and modifying DNS requests and responses for IPv4 and IPv6 networks. Supports both aggressive (intercept requests) and passive (modify responses) spoofing modes.
+A **DNS spoofing engine written in Go**, usable both as:
+
+- a **standalone CLI tool**
+- a **public Go library / API** for building custom DNS interception, poisoning, or testing tooling
+
+The CLI in `cmd/dnsspoofer` is just a **thin wrapper** around the engine.
 
 ---
 
@@ -34,6 +39,7 @@ go build -o dnsspoofer ./cmd/dnsspoofer
 
 ## Usage
 
+### CLI
 ```bash
 sudo ./dnsspoofer --interface eth0 --hosts /path/to/hosts.txt [--ip-mode ipv4|ipv6|ipv4+ipv6] [--spoof-mode aggressive|passive] [--scope local|remote] [--queue 0]
 ```
@@ -51,7 +57,7 @@ sudo ./dnsspoofer --interface eth0 --hosts /path/to/hosts.txt [--ip-mode ipv4|ip
 
 ---
 
-## Hosts File Format
+### Hosts File Format
 
 * Each line must contain a single IP and a single hostname pattern (wildcards allowed).
 * Comments supported using `#`.
@@ -61,6 +67,80 @@ sudo ./dnsspoofer --interface eth0 --hosts /path/to/hosts.txt [--ip-mode ipv4|ip
 192.168.1.100 example.com
 10.0.0.50 *.ads.example.net
 ```
+
+
+---
+
+## Public Go API Usage
+
+### Minimal Example
+
+```go
+iface, _ := net.InterfaceByName("eth0")
+
+hosts := dnsspoofer.Hosts{
+    "example.com.": []net.IP{net.ParseIP("10.0.0.123")},
+}
+
+engine := dnsspoofer.New(&dnsspoofer.EngineOptions{
+    Iface:     iface,
+    IPMode:    dnsspoofer.IPv4AndIPv6,
+    SpoofMode: dnsspoofer.Passive,
+    Scope:     dnsspoofer.Remote,
+    Hosts:     hosts,
+    Queue:     0,
+})
+defer engine.Stop() // Not mandatory but recommended in case the context is not cancelled
+
+ctx, cancel := context.WithCancel(context.Background())
+defer cancel()
+
+go engine.Run(ctx)
+
+// block / signal handling here
+```
+
+---
+
+## Engine API
+
+### `EngineOptions`
+
+```go
+type EngineOptions struct {
+    Iface     *net.Interface
+    IPMode    IPMode
+    SpoofMode SpoofMode
+    Scope     Scope
+    Hosts     map[string][]net.IP
+    Queue     uint16
+    Logger    Logger
+}
+```
+
+### Lifecycle
+
+* `New(opts *EngineOptions) *Engine`
+* `Run(ctx context.Context) error`
+* `Stop()`
+
+Context cancellation **fully tears down nftables rules and NFQUEUE**.
+
+---
+
+## Logger Interface
+
+You can inject your own logger:
+
+```go
+type Logger interface {
+    nfqueue.Logger
+    Error(msg any, args ...any)
+    Info(msg any, args ...any)
+}
+```
+
+If `Logger` is `nil`, a **dev/null logger** is used.
 
 ---
 
@@ -83,13 +163,6 @@ sudo ./dnsspoofer --interface eth0 --hosts /path/to/hosts.txt [--ip-mode ipv4|ip
 
 * `local`: Spoof only packets from the local machine.
 * `remote`: Spoof packets from other machines on the network (MITM scenarios).
-
----
-
-## Logging
-
-* **Release mode:** Info level logs with timestamps.
-* **Debug mode:** Debug level logs with caller info and timestamps (enable by building with `-tags debug`).
 
 ---
 
@@ -363,4 +436,4 @@ By using this tool, you acknowledge that:
 * You accept **full responsibility** for any damage, data loss, service disruption, or legal consequences resulting from its use.
 
 This project is provided **“as is”**, without warranty of any kind.
-Use responsibly. If you don’t have permission, don’t be an asshole.
+Use responsibly. If you don’t have permission, **don’t be an asshole**.

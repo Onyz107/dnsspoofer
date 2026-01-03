@@ -1,5 +1,3 @@
-//go:build debug
-
 package logger
 
 import (
@@ -9,7 +7,6 @@ import (
 )
 
 var Logger = log.NewWithOptions(os.Stdout, log.Options{
-	Level:           log.DebugLevel,
+	Level:           log.InfoLevel,
 	ReportTimestamp: true,
-	ReportCaller:    true,
 })

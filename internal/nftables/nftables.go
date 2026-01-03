@@ -146,12 +146,16 @@ func AddDNSQueue(ipMode IPMode, iface *net.Interface, spoofMode SpoofMode, scope
 	}
 
 	return func() error {
-		var errs []error
-		for _, c := range cleanups {
-			if err := c(); err != nil {
-				errs = append(errs, err)
+		var err error
+		once.Do(func() {
+			var errs []error
+			for _, c := range cleanups {
+				if e := c(); e != nil {
+					errs = append(errs, e)
+				}
 			}
-		}
-		return errors.Join(errs...)
+			err = errors.Join(errs...)
+		})
+		return err
 	}, nil
 }

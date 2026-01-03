@@ -1,5 +1,7 @@
 package nftables
 
+import "sync"
+
 // IPMode determines the IP spoofing mode.
 type IPMode uint32
 
@@ -16,16 +18,16 @@ const (
 	IPv6Only
 	// IPv4AndIPv6 spoos both IPv4 and IPv6 DNS requests/responses (A and AAAA records)
 	IPv4AndIPv6
+)
 
+const (
 	// Aggressive SpoofMode intercepts DNS requests and responds to them, then eventually drops the request.
-	//
-	// Rule: udp dport 53 queue num 0
 	Aggressive SpoofMode = iota
 	// Passive SpoofMode intercepts DNS responses and modifies them.
-	//
-	// Rule: udp sport 53 queue num 0
 	Passive
+)
 
+const (
 	// Local only spoofs packets coming from the local machine (OUTPUT chain)
 	Local Scope = iota
 	// Remote only spoofs packets coming from remote machines (FORWARD chanin)
@@ -36,3 +38,5 @@ const (
 	udpDestPortOffset   = 2
 	udpSourcePortOffset = 0
 )
+
+var once sync.Once

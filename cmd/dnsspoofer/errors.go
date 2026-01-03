@@ -10,4 +10,5 @@ var (
 	ErrRedirectDNS      = errors.New("failed to redirect DNS to NFQUEUE")
 	ErrLoadHostsFile    = errors.New("failed to load hosts file")
 	ErrSpoofDNS         = errors.New("failed to spoof DNS")
+	ErrRunEngine        = errors.New("failed to run DNS spoofer engine")
 )

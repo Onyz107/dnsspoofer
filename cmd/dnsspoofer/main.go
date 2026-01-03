@@ -8,16 +8,16 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/Onyz107/dnsspoofer"
 	"github.com/Onyz107/dnsspoofer/internal/banner"
 	"github.com/Onyz107/dnsspoofer/internal/logger"
 	"github.com/Onyz107/dnsspoofer/internal/nftables"
 	"github.com/Onyz107/dnsspoofer/internal/wildhosts"
-	"github.com/Onyz107/dnsspoofer/redirect"
-	"github.com/Onyz107/dnsspoofer/spoof"
+	"github.com/charmbracelet/log"
 	"github.com/urfave/cli/v2"
 )
 
-const version = "1.0.0"
+const version = "1.1.0"
 
 type options struct {
 	Interface    string
@@ -26,6 +26,7 @@ type options struct {
 	ScopeStr     string
 	Hosts        cli.Path
 	QueueInt     int
+	Deubg        bool
 }
 
 func main() {
@@ -79,8 +80,19 @@ func main() {
 				Value:       0,
 				Destination: &opts.QueueInt,
 			},
+			&cli.BoolFlag{
+				Name:        "debug",
+				Aliases:     []string{"d"},
+				Usage:       "Enable debug logging",
+				Value:       false,
+				Destination: &opts.Deubg,
+			},
 		},
 		Action: func(c *cli.Context) error {
+			if opts.Deubg {
+				logger.Logger.SetLevel(log.DebugLevel)
+			}
+
 			ifaceHandle, err := net.InterfaceByName(opts.Interface)
 			if err != nil {
 				return errors.Join(ErrOpenInterface, err)
@@ -120,23 +132,32 @@ func main() {
 
 			queue := uint16(opts.QueueInt)
 
-			sigCtx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-			defer cancel()
-
-			cleanup, err := redirect.DNS(ipMode, ifaceHandle, spoofMode, scope, uint16(queue))
-			if err != nil {
-				return errors.Join(ErrRedirectDNS, err)
-			}
-			defer cleanup()
-
 			hosts, err := wildhosts.LoadFile(opts.Hosts)
 			if err != nil {
 				return errors.Join(ErrLoadHostsFile, err)
 			}
 
-			if err := spoof.DNS(sigCtx, queue, hosts); err != nil {
-				return errors.Join(ErrSpoofDNS, err)
+			sigCtx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+			defer cancel()
+
+			spoof := dnsspoofer.New(&dnsspoofer.EngineOptions{
+				Iface:     ifaceHandle,
+				IPMode:    ipMode,
+				SpoofMode: spoofMode,
+				Scope:     scope,
+				Hosts:     hosts.Map(),
+				Queue:     queue,
+				Logger:    logger.Logger,
+			})
+
+			logger.Logger.Info("Starting dnsspoofer")
+			if err := spoof.Run(sigCtx); err != nil {
+				return errors.Join(ErrRunEngine, err)
 			}
+
+			<-sigCtx.Done()
+			logger.Logger.Info("Shutting down dnsspoofer")
+			spoof.Stop()
 
 			return nil
 		},
