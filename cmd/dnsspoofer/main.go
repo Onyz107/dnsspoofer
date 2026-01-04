@@ -16,7 +16,7 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-const version = "1.3.0"
+const version = "1.3.1"
 
 type options struct {
 	Interface    string
