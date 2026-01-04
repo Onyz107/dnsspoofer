@@ -1,10 +1,12 @@
 package nftables
 
 import (
+	"context"
 	"encoding/binary"
 	"errors"
 	"fmt"
 	"net"
+	"sync"
 
 	"github.com/Onyz107/dnsspoofer/internal/logger"
 	"github.com/google/nftables"
@@ -84,21 +86,23 @@ func createNFTRule(tableName string, family nftables.TableFamily, chainName stri
 // It supports filtering for IPv4, IPv6, or both, and can target either DNS requests or responses.
 //
 // Returns an error if an invalid parameter is provided, or if creating or flushing nftables rules fails.
-func AddDNSQueue(ipMode IPMode, iface *net.Interface, spoofMode SpoofMode, scope Scope, queue uint16) (func() error, error) {
+func AddDNSQueue(ctx context.Context, ipMode IPMode, iface *net.Interface, spoofMode SpoofMode, scope Scope, queue uint16) (func() error, error) {
+	log := logger.LoggerFrom(ctx)
+
 	var families map[string]nftables.TableFamily
 	switch ipMode {
 	case IPv4Only:
-		logger.Logger.Debug("filtering only for IPv4")
+		log.Debug("filtering only for IPv4")
 		families = map[string]nftables.TableFamily{
 			"dnsspoof_IPv4_filter": nftables.TableFamilyIPv4,
 		}
 	case IPv6Only:
-		logger.Logger.Debug("filtering only for IPv6")
+		log.Debug("filtering only for IPv6")
 		families = map[string]nftables.TableFamily{
 			"dnsspoof_IPv6_filter": nftables.TableFamilyIPv6,
 		}
 	case IPv4AndIPv6:
-		logger.Logger.Debug("filtering for both IPv4 and IPv6")
+		log.Debug("filtering for both IPv4 and IPv6")
 		families = map[string]nftables.TableFamily{
 			"dnsspoof_IPv4_filter": nftables.TableFamilyIPv4,
 			"dnsspoof_IPv6_filter": nftables.TableFamilyIPv6,
@@ -115,19 +119,19 @@ func AddDNSQueue(ipMode IPMode, iface *net.Interface, spoofMode SpoofMode, scope
 		key = expr.MetaKeyOIF           // sniff from output interface
 		offset = udpDestPortOffset      // dport
 		hook = nftables.ChainHookOutput // OUTPUT chain
-		logger.Logger.Debug("filtering for DNS requests", "key", "OIF", "offset", "2 (dport)", "hook", "OUTPUT")
+		log.Debug("filtering for DNS requests", "key", "OIF", "offset", "2 (dport)", "hook", "OUTPUT")
 	case Passive:
 		key = expr.MetaKeyIIF          // sniff from input interface
 		offset = udpSourcePortOffset   // sport
 		hook = nftables.ChainHookInput // INPUT chain
-		logger.Logger.Debug("filtering for DNS responses", "key", "IIF", "offset", "1 (sport)", "hook", "INPUT")
+		log.Debug("filtering for DNS responses", "key", "IIF", "offset", "1 (sport)", "hook", "INPUT")
 	default:
 		return nil, ErrInvalidSpoofMode
 	}
 
 	if scope == Remote {
 		hook = nftables.ChainHookForward
-		logger.Logger.Debug("filtering for remote DNS packets", "hook", "FORWARD")
+		log.Debug("filtering for remote DNS packets", "hook", "FORWARD")
 	} else if scope != Local {
 		return nil, ErrInvalidScope
 	}
@@ -144,6 +148,8 @@ func AddDNSQueue(ipMode IPMode, iface *net.Interface, spoofMode SpoofMode, scope
 
 		cleanups = append(cleanups, cleanup)
 	}
+
+	var once sync.Once
 
 	return func() error {
 		var err error

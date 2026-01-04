@@ -1,6 +1,7 @@
 package dns
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/Onyz107/dnsspoofer/internal/logger"
@@ -9,7 +10,9 @@ import (
 	"github.com/google/gopacket/layers"
 )
 
-func ParsePacket(pkt nfqueue.Packet) (*ParsedPacket, error) {
+func ParsePacket(ctx context.Context, pkt nfqueue.Packet) (*ParsedPacket, error) {
+	log := logger.LoggerFrom(ctx)
+
 	var packet gopacket.Packet
 	var ipLayer gopacket.Layer
 	ipVersion := pkt.IPVersion
@@ -25,19 +28,19 @@ func ParsePacket(pkt nfqueue.Packet) (*ParsedPacket, error) {
 	}
 
 	if ipLayer == nil {
-		logger.Logger.Debug("malformed IP layer", "payload", pkt.Payload)
+		log.Debug("malformed IP layer", "payload", pkt.Payload)
 		return nil, ErrInvalidIPLayer
 	}
 
 	udpLayer := packet.Layer(layers.LayerTypeUDP)
 	if udpLayer == nil {
-		logger.Logger.Debug("malformed UDP layer", "payload", pkt.Payload)
+		log.Debug("malformed UDP layer", "payload", pkt.Payload)
 		return nil, ErrInvalidUDPLayer
 	}
 
 	dnsLayer := packet.Layer(layers.LayerTypeDNS)
 	if dnsLayer == nil {
-		logger.Logger.Debug("malformed DNS layer", "payload", pkt.Payload)
+		log.Debug("malformed DNS layer", "payload", pkt.Payload)
 		return nil, ErrInvalidDNSLayer
 	}
 
@@ -46,7 +49,7 @@ func ParsePacket(pkt nfqueue.Packet) (*ParsedPacket, error) {
 	udp := udpLayer.(*layers.UDP)
 	dns := dnsLayer.(*layers.DNS)
 	if len(dns.Questions) == 0 {
-		logger.Logger.Debug("malformed DNS layer", "payload", pkt.Payload)
+		log.Debug("malformed DNS layer", "payload", pkt.Payload)
 		return nil, ErrInvalidDNSLayer
 	}
 	switch ipVersion {

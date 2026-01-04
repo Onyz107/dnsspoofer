@@ -3,9 +3,12 @@ package dnsspoofer
 import (
 	"context"
 	"errors"
+	"net"
 	"regexp"
+	"strings"
 
 	"github.com/Onyz107/dnsspoofer/internal/dns"
+	"github.com/Onyz107/dnsspoofer/internal/logger"
 	"github.com/Onyz107/dnsspoofer/internal/nfqueue"
 	"github.com/Onyz107/dnsspoofer/internal/nftables"
 	gonfqueue "github.com/florianl/go-nfqueue/v2"
@@ -13,8 +16,8 @@ import (
 )
 
 func New(opts *EngineOptions) *Engine {
-	if opts.Logger == nil {
-		opts.Logger = new(devNull)
+	if opts.Log == nil {
+		opts.Log = new(logger.NopLogger)
 	}
 	engine := &Engine{
 		opts: opts,
@@ -37,15 +40,14 @@ func stringToFields(slice string) []any {
 
 func (e *Engine) Run(ctx context.Context) error {
 	inCtx, cancel := context.WithCancel(ctx)
-	e.ctx = inCtx
+	e.ctx = logger.WithLogger(inCtx, e.opts.Log)
 	e.cancel = cancel
 
-	clean, err := nftables.AddDNSQueue(e.opts.IPMode, e.opts.Iface, e.opts.SpoofMode, e.opts.Scope, e.opts.Queue)
+	clean, err := nftables.AddDNSQueue(e.ctx, e.opts.IPMode, e.opts.Iface, e.opts.SpoofMode, e.opts.Scope, e.opts.Queue)
 	if err != nil {
 		e.cancel()
 		return errors.Join(ErrAddDNSQueue, err)
 	}
-
 	e.cancel = func() {
 		cancel()
 		clean()
@@ -58,7 +60,7 @@ func (e *Engine) Run(ctx context.Context) error {
 		Copymode:     gonfqueue.NfQnlCopyPacket,
 		Flags:        gonfqueue.NfQaCfgFlagFailOpen,
 		AfFamily:     unix.AF_UNSPEC,
-		Logger:       e.opts.Logger,
+		Logger:       e.opts.Log,
 	})
 	if err != nil {
 		e.cancel()
@@ -71,25 +73,23 @@ func (e *Engine) Run(ctx context.Context) error {
 	}
 	defer e.cancel()
 
-	pkts, err := nfqueue.GetPacketChan(inCtx, nfq)
+	pkts, err := nfqueue.GetPacketChan(e.ctx, nfq)
 	if err != nil {
-		e.cancel()
 		return errors.Join(ErrGetPacketChan, err)
 	}
 
 	for {
 		select {
-		case <-inCtx.Done():
-			e.cancel()
+		case <-e.ctx.Done():
 			return nil
 		case pkt := <-pkts:
-			parsed, err := dns.ParsePacket(pkt)
+			parsed, err := dns.ParsePacket(e.ctx, pkt)
 			if err != nil {
-				e.opts.Logger.Error(ErrParsePacket.Error(), "err", err)
-				nfq.SetVerdict(pkt.PacketID, gonfqueue.NfDrop)
+				e.opts.Log.Error(ErrParsePacket.Error(), "err", err)
+				nfq.SetVerdict(pkt.PacketID, gonfqueue.NfAccept)
 				continue
 			}
-			e.opts.Logger.Info("parsed packet", stringToFields(parsed.String())...)
+			e.opts.Log.Info("parsed packet", stringToFields(parsed.String())...)
 
 			var name string
 			if len(parsed.DNS.Answers) > 0 {
@@ -97,9 +97,16 @@ func (e *Engine) Run(ctx context.Context) error {
 			} else if len(parsed.DNS.Questions) > 0 {
 				name = string(parsed.DNS.Questions[0].Name)
 			}
+			name = strings.ToLower(strings.TrimSuffix(name, "."))
 
-			ips, ok := e.opts.Hosts[name]
-			if !ok || len(ips) == 0 {
+			var ips []net.IP
+			for re, ipaddrs := range e.opts.Hosts {
+				if re.MatchString(name) {
+					ips = ipaddrs // Use the last matching entry
+				}
+			}
+			e.opts.Log.Debug("looking up", "name", name, "ips", ips, "hosts", e.opts.Hosts)
+			if len(ips) == 0 {
 				nfq.SetVerdict(pkt.PacketID, gonfqueue.NfAccept)
 				continue
 			}
@@ -111,22 +118,22 @@ func (e *Engine) Run(ctx context.Context) error {
 				spoofed, err = dns.SpoofResponse(parsed, ips...)
 			}
 			if err != nil {
-				e.opts.Logger.Error(ErrSpoofPacket.Error(), "err", err)
-				nfq.SetVerdict(pkt.PacketID, gonfqueue.NfDrop)
+				e.opts.Log.Error(ErrSpoofPacket.Error(), "err", err)
+				nfq.SetVerdict(pkt.PacketID, gonfqueue.NfAccept)
 				continue
 			}
-			e.opts.Logger.Info("spoofed packet", stringToFields(spoofed.String())...)
+			e.opts.Log.Info("spoofed packet", stringToFields(spoofed.String())...)
 
 			newBytes, err := spoofed.Serialize()
 			if err != nil {
-				e.opts.Logger.Error(ErrSerializePkt.Error(), "err", err)
-				nfq.SetVerdict(pkt.PacketID, gonfqueue.NfDrop)
+				e.opts.Log.Error(ErrSerializePkt.Error(), "err", err)
+				nfq.SetVerdict(pkt.PacketID, gonfqueue.NfAccept)
 				continue
 			}
 
 			if err := nfq.SetVerdictWithOption(pkt.PacketID, gonfqueue.NfAccept, gonfqueue.WithAlteredPacket(newBytes)); err != nil {
-				e.opts.Logger.Error(ErrSetVerdict.Error(), "err", err)
-				nfq.SetVerdict(pkt.PacketID, gonfqueue.NfDrop)
+				e.opts.Log.Error(ErrSetVerdict.Error(), "err", err)
+				nfq.SetVerdict(pkt.PacketID, gonfqueue.NfAccept)
 			}
 		}
 	}

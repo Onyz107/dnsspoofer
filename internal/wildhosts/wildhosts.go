@@ -2,11 +2,13 @@ package wildhosts
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"io"
 	"net"
 	"os"
 	"path"
+	"regexp"
 	"strings"
 
 	"github.com/Onyz107/dnsspoofer/internal/logger"
@@ -24,19 +26,21 @@ type Hosts struct {
 }
 
 // LoadFile loads hosts from a file path.
-func LoadFile(filename string) (*Hosts, error) {
+func LoadFile(ctx context.Context, filename string) (*Hosts, error) {
 	f, err := os.Open(filename)
 	if err != nil {
 		return nil, err
 	}
 	defer f.Close()
-	return Parse(f)
+	return Parse(ctx, f)
 }
 
 // Parse parses hosts content from an io.Reader.
 // Lines: IP <whitespace> PATTERN [# comment]
 // Only one PATTERN allowed per line after IP (no aliases).
-func Parse(r io.Reader) (*Hosts, error) {
+func Parse(ctx context.Context, r io.Reader) (*Hosts, error) {
+	log := logger.LoggerFrom(ctx)
+
 	h := &Hosts{}
 	sc := bufio.NewScanner(r)
 	lineno := 0
@@ -71,7 +75,7 @@ func Parse(r io.Reader) (*Hosts, error) {
 		if pattern == "" {
 			return nil, fmt.Errorf("%w: line %d", ErrEmptyHostname, lineno)
 		}
-		logger.Logger.Debug("loaded entry", "ip", ip, "pattern", pattern)
+		log.Debug("loaded entry", "ip", ip, "pattern", pattern)
 		h.Entries = append(h.Entries, Entry{IP: ip, Pattern: pattern})
 	}
 	if err := sc.Err(); err != nil {
@@ -97,13 +101,14 @@ func (h *Hosts) Lookup(hostname string) []net.IP {
 	return out
 }
 
-func (h *Hosts) Map() map[string][]net.IP {
-	out := make(map[string][]net.IP)
+func (h *Hosts) Map() map[*regexp.Regexp][]net.IP {
+	out := make(map[*regexp.Regexp][]net.IP)
 	if h == nil {
 		return out
 	}
 	for _, e := range h.Entries {
-		out[e.Pattern] = append(out[e.Pattern], e.IP)
+		pattern := regexp.MustCompile("^" + strings.ReplaceAll(regexp.QuoteMeta(e.Pattern), `\*`, ".*") + "$")
+		out[pattern] = append(out[pattern], e.IP)
 	}
 	return out
 }

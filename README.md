@@ -68,6 +68,7 @@ sudo ./dnsspoofer --interface eth0 --hosts /path/to/hosts.txt [--ip-mode ipv4|ip
 10.0.0.50 *.ads.example.net
 ```
 
+If a hostname matches multiple patterns the last pattern will be used.
 
 ---
 

@@ -1,7 +1,5 @@
 package nftables
 
-import "sync"
-
 // IPMode determines the IP spoofing mode.
 type IPMode uint32
 
@@ -16,7 +14,7 @@ const (
 	IPv4Only IPMode = iota
 	// IPv6Only only spoof IPv6 DNS requests/responses (AAAA records)
 	IPv6Only
-	// IPv4AndIPv6 spoos both IPv4 and IPv6 DNS requests/responses (A and AAAA records)
+	// IPv4AndIPv6 spoofs both IPv4 and IPv6 DNS requests/responses (A and AAAA records)
 	IPv4AndIPv6
 )
 
@@ -38,5 +36,3 @@ const (
 	udpDestPortOffset   = 2
 	udpSourcePortOffset = 0
 )
-
-var once sync.Once

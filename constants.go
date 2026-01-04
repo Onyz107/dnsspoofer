@@ -3,9 +3,10 @@ package dnsspoofer
 import (
 	"context"
 	"net"
+	"regexp"
 
+	"github.com/Onyz107/dnsspoofer/internal/logger"
 	"github.com/Onyz107/dnsspoofer/internal/nftables"
-	"github.com/florianl/go-nfqueue/v2"
 )
 
 // IPMode determines the IP spoofing mode.
@@ -19,25 +20,15 @@ type Scope = nftables.Scope
 
 // Logger is the logging interface used by the DNS spoofer engine
 type Logger interface {
-	nfqueue.Logger
-	Error(msg any, args ...any)
-	Info(msg any, args ...any)
+	logger.Logger
 }
-
-// devNull satisfies the Logger interface.
-type devNull struct{}
-
-func (dn *devNull) Debugf(format string, args ...any) {}
-func (dn *devNull) Errorf(format string, args ...any) {}
-func (dn *devNull) Info(msg any, args ...any)         {}
-func (dn *devNull) Error(msg any, args ...any)        {}
 
 const (
 	// IPv4Only only spoofs IPv4 DNS requests/responses (A records)
 	IPv4Only = nftables.IPv4Only
 	// IPv6Only only spoof IPv6 DNS requests/responses (AAAA records)
 	IPv6Only = nftables.IPv6Only
-	// IPv4AndIPv6 spoos both IPv4 and IPv6 DNS requests/responses (A and AAAA records)
+	// IPv4AndIPv6 spoofs both IPv4 and IPv6 DNS requests/responses (A and AAAA records)
 	IPv4AndIPv6 = nftables.IPv4AndIPv6
 )
 
@@ -66,7 +57,7 @@ type Engine struct {
 }
 
 // Hosts represents a mapping of hostnames to IP addresses
-type Hosts map[string][]net.IP
+type Hosts map[*regexp.Regexp][]net.IP
 
 // EngineOptions holds the configuration options for the DNS spoofer engine
 type EngineOptions struct {
@@ -82,6 +73,6 @@ type EngineOptions struct {
 	Hosts Hosts
 	// Queue is the NFQUEUE number to use
 	Queue uint16
-	// Logger is the logger to use, if nil a dev/null logger is used
-	Logger Logger
+	// Log is the logger to use, if nil a dev/null logger is used
+	Log Logger
 }

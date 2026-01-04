@@ -4,11 +4,13 @@ import "github.com/google/gopacket/layers"
 
 const TTL = 60
 
+// ParsedPacket represents a parsed DNS packet with its layers and metadata.
 type ParsedPacket struct {
 	IPv4 *layers.IPv4
 	IPv6 *layers.IPv6
-	UDP  *layers.UDP
-	DNS  *layers.DNS
+
+	UDP *layers.UDP
+	DNS *layers.DNS
 
 	Name      string
 	Record    string

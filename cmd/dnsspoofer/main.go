@@ -17,7 +17,7 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-const version = "1.1.0"
+const version = "1.3.0"
 
 type options struct {
 	Interface    string
@@ -26,7 +26,7 @@ type options struct {
 	ScopeStr     string
 	Hosts        cli.Path
 	QueueInt     int
-	Deubg        bool
+	Debug        bool
 }
 
 func main() {
@@ -85,12 +85,12 @@ func main() {
 				Aliases:     []string{"d"},
 				Usage:       "Enable debug logging",
 				Value:       false,
-				Destination: &opts.Deubg,
+				Destination: &opts.Debug,
 			},
 		},
 		Action: func(c *cli.Context) error {
-			if opts.Deubg {
-				logger.Logger.SetLevel(log.DebugLevel)
+			if opts.Debug {
+				logger.Log.SetLevel(log.DebugLevel)
 			}
 
 			ifaceHandle, err := net.InterfaceByName(opts.Interface)
@@ -132,7 +132,7 @@ func main() {
 
 			queue := uint16(opts.QueueInt)
 
-			hosts, err := wildhosts.LoadFile(opts.Hosts)
+			hosts, err := wildhosts.LoadFile(context.TODO(), opts.Hosts)
 			if err != nil {
 				return errors.Join(ErrLoadHostsFile, err)
 			}
@@ -147,16 +147,16 @@ func main() {
 				Scope:     scope,
 				Hosts:     hosts.Map(),
 				Queue:     queue,
-				Logger:    logger.Logger,
+				Log:       logger.Log,
 			})
 
-			logger.Logger.Info("Starting dnsspoofer")
+			logger.Log.Info("Starting dnsspoofer")
 			if err := spoof.Run(sigCtx); err != nil {
 				return errors.Join(ErrRunEngine, err)
 			}
 
 			<-sigCtx.Done()
-			logger.Logger.Info("Shutting down dnsspoofer")
+			logger.Log.Info("Shutting down dnsspoofer")
 			spoof.Stop()
 
 			return nil
@@ -164,6 +164,6 @@ func main() {
 	}
 
 	if err := app.Run(os.Args); err != nil {
-		logger.Logger.Fatal(err)
+		logger.Log.Fatal(err)
 	}
 }

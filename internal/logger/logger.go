@@ -6,7 +6,7 @@ import (
 	"github.com/charmbracelet/log"
 )
 
-var Logger = log.NewWithOptions(os.Stdout, log.Options{
+var Log = log.NewWithOptions(os.Stdout, log.Options{
 	Level:           log.InfoLevel,
 	ReportTimestamp: true,
 })
