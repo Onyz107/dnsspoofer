@@ -11,7 +11,6 @@ import (
 	"github.com/Onyz107/dnsspoofer"
 	"github.com/Onyz107/dnsspoofer/internal/banner"
 	"github.com/Onyz107/dnsspoofer/internal/logger"
-	"github.com/Onyz107/dnsspoofer/internal/nftables"
 	"github.com/Onyz107/dnsspoofer/internal/wildhosts"
 	"github.com/charmbracelet/log"
 	"github.com/urfave/cli/v2"
@@ -98,34 +97,34 @@ func main() {
 				return errors.Join(ErrOpenInterface, err)
 			}
 
-			var ipMode nftables.IPMode
+			var ipMode dnsspoofer.IPMode
 			switch opts.IPModeStr {
 			case "ipv4":
-				ipMode = nftables.IPv4Only
+				ipMode = dnsspoofer.IPv4Only
 			case "ipv6":
-				ipMode = nftables.IPv6Only
+				ipMode = dnsspoofer.IPv6Only
 			case "ipv4+ipv6":
-				ipMode = nftables.IPv4AndIPv6
+				ipMode = dnsspoofer.IPv4AndIPv6
 			default:
 				return ErrInvalidIPMode
 			}
 
-			var spoofMode nftables.SpoofMode
+			var spoofMode dnsspoofer.SpoofMode
 			switch opts.SpoofModeStr {
 			case "aggressive":
-				spoofMode = nftables.Aggressive
+				spoofMode = dnsspoofer.Aggressive
 			case "passive":
-				spoofMode = nftables.Passive
+				spoofMode = dnsspoofer.Passive
 			default:
 				return ErrInvalidSpoofMode
 			}
 
-			var scope nftables.Scope
+			var scope dnsspoofer.Scope
 			switch opts.ScopeStr {
 			case "local":
-				scope = nftables.Local
+				scope = dnsspoofer.Local
 			case "remote":
-				scope = nftables.Remote
+				scope = dnsspoofer.Remote
 			default:
 				return ErrInvalidScope
 			}
