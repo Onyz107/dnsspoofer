@@ -438,3 +438,10 @@ By using this tool, you acknowledge that:
 
 This project is provided **“as is”**, without warranty of any kind.
 Use responsibly. If you don’t have permission, **don’t be an asshole**.
+
+---
+
+## TODO
+* Add DNSSEC support
+* Handle DNS over TCP
+* Handle DoH/DoT properly
