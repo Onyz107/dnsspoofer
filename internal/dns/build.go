@@ -1,7 +1,6 @@
 package dns
 
 import (
-	"fmt"
 	"net"
 
 	"github.com/google/gopacket/layers"
@@ -40,10 +39,8 @@ func buildDNSResponse(dnsLayer *layers.DNS, ips ...net.IP) (*layers.DNS, error) 
 	}
 
 	if len(dnsLayer.Answers) > 0 {
-		fmt.Print("return")
 		return dnsLayer, nil
 	}
-	fmt.Print("no answers")
 
 	var answers []layers.DNSResourceRecord
 	for _, q := range dnsLayer.Questions {

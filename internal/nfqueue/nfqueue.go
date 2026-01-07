@@ -27,6 +27,7 @@ func GetPacketChan(ctx context.Context, nfq *nfqueue.Nfqueue) (<-chan Packet, er
 
 		select {
 		case packetCh <- pkt:
+			log.Debug("received packet sending to channel", "id", pkt.PacketID)
 		case <-ctx.Done():
 			nfq.SetVerdict(pkt.PacketID, nfqueue.NfAccept)
 			return 0

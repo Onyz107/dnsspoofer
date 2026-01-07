@@ -53,3 +53,44 @@ func (pp *ParsedPacket) String() string {
 
 	return b.String()
 }
+
+func (pp *ParsedPacket) LogFields() []any {
+	fields := []any{
+		"request", pp.IsRequest,
+	}
+
+	if pp.IPv4 != nil {
+		fields = append(fields,
+			"ip", "IPv4",
+			"src", pp.IPv4.SrcIP.String(),
+			"dst", pp.IPv4.DstIP.String(),
+		)
+	} else if pp.IPv6 != nil {
+		fields = append(fields,
+			"ip", "IPv6",
+			"src", pp.IPv6.SrcIP.String(),
+			"dst", pp.IPv6.DstIP.String(),
+		)
+	}
+
+	if pp.DNS != nil {
+		if len(pp.DNS.Answers) > 0 {
+			a := pp.DNS.Answers[0]
+			fields = append(fields,
+				"dns_name", string(a.Name),
+				"dns_record", a.Type.String(),
+				"dns_ttl", a.TTL,
+				"dns_data", a.String(),
+			)
+		} else if len(pp.DNS.Questions) > 0 {
+			q := pp.DNS.Questions[0]
+			fields = append(fields,
+				"dns_name", string(q.Name),
+				"dns_record", q.Type.String(),
+				"dns_class", q.Class.String(),
+			)
+		}
+	}
+
+	return fields
+}

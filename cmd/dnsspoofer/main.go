@@ -16,7 +16,7 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-const version = "1.3.1"
+const version = "1.3.2"
 
 type options struct {
 	Interface    string
@@ -90,6 +90,7 @@ func main() {
 		Action: func(c *cli.Context) error {
 			if opts.Debug {
 				logger.Log.SetLevel(log.DebugLevel)
+				logger.Log.Debug("debugging on")
 			}
 
 			ifaceHandle, err := net.InterfaceByName(opts.Interface)
@@ -149,13 +150,13 @@ func main() {
 				Log:       logger.Log,
 			})
 
-			logger.Log.Info("Starting dnsspoofer")
+			logger.Log.Info("starting dnsspoofer")
 			if err := spoof.Run(sigCtx); err != nil {
 				return errors.Join(ErrRunEngine, err)
 			}
 
 			<-sigCtx.Done()
-			logger.Log.Info("Shutting down dnsspoofer")
+			logger.Log.Info("shutting down dnsspoofer")
 			spoof.Stop()
 
 			return nil

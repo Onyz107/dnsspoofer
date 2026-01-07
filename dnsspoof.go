@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"net"
-	"regexp"
 	"strings"
 
 	"github.com/Onyz107/dnsspoofer/internal/dns"
@@ -23,19 +22,6 @@ func New(opts *EngineOptions) *Engine {
 		opts: opts,
 	}
 	return engine
-}
-
-var re = regexp.MustCompile(`(\w+)="([^"]*)"`)
-
-func stringToFields(slice string) []any {
-	matches := re.FindAllStringSubmatch(slice, -1)
-	fields := make([]any, 0, len(matches))
-	for _, match := range matches {
-		if len(match) >= 3 {
-			fields = append(fields, match[1], match[2])
-		}
-	}
-	return fields
 }
 
 func (e *Engine) Run(ctx context.Context) error {
@@ -89,7 +75,7 @@ func (e *Engine) Run(ctx context.Context) error {
 				nfq.SetVerdict(pkt.PacketID, gonfqueue.NfAccept)
 				continue
 			}
-			e.opts.Log.Info("parsed packet", stringToFields(parsed.String())...)
+			e.opts.Log.Info("parsed packet", parsed.LogFields()...)
 
 			var name string
 			if len(parsed.DNS.Answers) > 0 {
@@ -105,8 +91,8 @@ func (e *Engine) Run(ctx context.Context) error {
 					ips = ipaddrs // Use the last matching entry
 				}
 			}
-			e.opts.Log.Debug("looking up", "name", name, "ips", ips, "hosts", e.opts.Hosts)
 			if len(ips) == 0 {
+				logger.Log.Info("parsed packet not in whitelist, skipping")
 				nfq.SetVerdict(pkt.PacketID, gonfqueue.NfAccept)
 				continue
 			}
@@ -122,7 +108,7 @@ func (e *Engine) Run(ctx context.Context) error {
 				nfq.SetVerdict(pkt.PacketID, gonfqueue.NfAccept)
 				continue
 			}
-			e.opts.Log.Info("spoofed packet", stringToFields(spoofed.String())...)
+			e.opts.Log.Info("spoofed packet", spoofed.LogFields()...)
 
 			newBytes, err := spoofed.Serialize()
 			if err != nil {
