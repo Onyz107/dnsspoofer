@@ -16,7 +16,6 @@ The CLI in `cmd/dnsspoofer` is just a **thin wrapper** around the engine.
 * Supports local and remote packet scopes.
 * Wildcard hostname support via hosts file.
 * Configurable NFQUEUE binding for packet interception.
-* Detailed logging with debug and release modes.
 
 ---
 
@@ -40,8 +39,14 @@ go build -o dnsspoofer ./cmd/dnsspoofer
 ## Usage
 
 ### CLI
+#### Give the program capabilities to modify NFTables
 ```bash
-sudo ./dnsspoofer --interface eth0 --hosts /path/to/hosts.txt [--ip-mode ipv4|ipv6|ipv4+ipv6] [--spoof-mode aggressive|passive] [--scope local|remote] [--queue 0]
+sudo setcap cap_net_admin=+ep ./dnsspoofer
+```
+
+#### Run
+```bash
+./dnsspoofer --interface eth0 --hosts /path/to/hosts.txt [--ip-mode ipv4|ipv6|ipv4+ipv6] [--spoof-mode aggressive|passive] [--scope local|remote] [--queue 0]
 ```
 
 ### Flags
@@ -65,7 +70,7 @@ sudo ./dnsspoofer --interface eth0 --hosts /path/to/hosts.txt [--ip-mode ipv4|ip
 
 ```
 192.168.1.100 example.com
-10.0.0.50 *.ads.example.net
+10.0.0.50 *.ads.example.net # Block ads
 ```
 
 If a hostname matches multiple patterns the last pattern will be used.
@@ -83,6 +88,9 @@ hosts := dnsspoofer.Hosts{
     "example.com.": []net.IP{net.ParseIP("10.0.0.123")},
 }
 
+ctx, cancel := context.WithCancel(context.Background())
+defer cancel()
+
 engine := dnsspoofer.New(&dnsspoofer.EngineOptions{
     Iface:     iface,
     IPMode:    dnsspoofer.IPv4AndIPv6,
@@ -93,12 +101,7 @@ engine := dnsspoofer.New(&dnsspoofer.EngineOptions{
 })
 defer engine.Stop() // Not mandatory but recommended in case the context is not cancelled
 
-ctx, cancel := context.WithCancel(context.Background())
-defer cancel()
-
-go engine.Run(ctx)
-
-// block / signal handling here
+engine.Run(ctx)
 ```
 
 ---
@@ -106,6 +109,13 @@ go engine.Run(ctx)
 ## Engine API
 
 ### `EngineOptions`
+```go
+type IPMode uint32
+type SpoofMode uint32
+type Scope uint32
+type Hosts map[*regexp.Regexp][]net.IP
+```
+
 
 ```go
 type EngineOptions struct {
@@ -113,7 +123,7 @@ type EngineOptions struct {
     IPMode    IPMode
     SpoofMode SpoofMode
     Scope     Scope
-    Hosts     map[string][]net.IP
+    Hosts     Hosts
     Queue     uint16
     Logger    Logger
 }
@@ -135,9 +145,10 @@ You can inject your own logger:
 
 ```go
 type Logger interface {
-    nfqueue.Logger
-    Error(msg any, args ...any)
-    Info(msg any, args ...any)
+	nfqueue.Logger
+	Debug(msg any, args ...any)
+	Error(msg any, args ...any)
+	Info(msg any, args ...any)
 }
 ```
 
@@ -164,14 +175,6 @@ If `Logger` is `nil`, a **dev/null logger** is used.
 
 * `local`: Spoof only packets from the local machine.
 * `remote`: Spoof packets from other machines on the network (MITM scenarios).
-
----
-
-## Internals
-
-* Uses `nftables` to redirect DNS packets to NFQUEUE.
-* Intercepts packets via `go-nfqueue` and parses them using `gopacket`.
-* Supports wildcard host matching and multiple IPs per hostname.
 
 ---
 
@@ -275,8 +278,6 @@ Client ──▶ FORWARD ──▶ NFQUEUE ──▶ Router ──▶ Internet
 | ---------------- | ---------------- |
 | Stealth          | Passive          |
 | Speed            | Aggressive       |
-| MITM             | Passive          |
-| Local testing    | Aggressive       |
 | Replace resolver | Aggressive       |
 
 If you’re doing MITM you probably should use passive mode, unless you know what you are doing.
@@ -317,7 +318,7 @@ DNSspoofer is powerful, but there are **important limitations** to keep in mind:
     * If a client **validates DNSSEC**, your spoofed answers will be rejected.
     * Passive mode makes this worse because you modify signed responses.
 
-    **Symptoms**
+    Symptoms
 
     * Pages fail to load
     * “DNS_PROBE_FINISHED_BAD_SECURE_CONFIG”
@@ -389,7 +390,7 @@ Most browsers and systems hardcode a list of known DoH / DoT provider hostnames,
 
 If these endpoints are **unreachable or fail repeatedly**, some clients will **fallback to classic DNS (UDP/53)**.
 
-### The Hack
+### DNS bootstrap attack
 
 You can add known DoH/DoT provider hostnames to your hosts file and redirect them to:
 
@@ -419,7 +420,7 @@ This approach is **not reliable** and **not universal**:
 * Some apps pin IPs or certificates
 * Future updates may remove fallback entirely
 
-This is **not a real DoH bypass**, just a **behavioral downgrade attack** that depends on client implementation details.
+This is called a ***DNS bootstrap attack*** and it is **not a real DoH bypass**, just a **behavioral downgrade attack** that depends on client implementation details.s
 
 > Treat this as a convenience trick, not a core feature.
 

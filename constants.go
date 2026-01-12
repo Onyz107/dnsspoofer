@@ -25,25 +25,25 @@ type Logger interface {
 
 const (
 	// IPv4Only only spoofs IPv4 DNS requests/responses (A records)
-	IPv4Only = nftables.IPv4Only
+	IPv4Only IPMode = nftables.IPv4Only
 	// IPv6Only only spoof IPv6 DNS requests/responses (AAAA records)
-	IPv6Only = nftables.IPv6Only
+	IPv6Only IPMode = nftables.IPv6Only
 	// IPv4AndIPv6 spoofs both IPv4 and IPv6 DNS requests/responses (A and AAAA records)
-	IPv4AndIPv6 = nftables.IPv4AndIPv6
+	IPv4AndIPv6 IPMode = nftables.IPv4AndIPv6
 )
 
 const (
 	// Aggressive SpoofMode intercepts DNS requests and responds to them, then eventually drops the request.
-	Aggressive = nftables.Aggressive
+	Aggressive SpoofMode = nftables.Aggressive
 	// Passive SpoofMode intercepts DNS responses and modifies them.
-	Passive = nftables.Passive
+	Passive SpoofMode = nftables.Passive
 )
 
 const (
 	// Local only spoofs packets coming from the local machine (OUTPUT chain)
-	Local = nftables.Local
+	Local Scope = nftables.Local
 	// Remote only spoofs packets coming from remote machines (FORWARD chain)
-	Remote = nftables.Remote
+	Remote Scope = nftables.Remote
 )
 
 // Engine is the main DNS spoofer engine
