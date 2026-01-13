@@ -136,6 +136,8 @@ func main() {
 			if err != nil {
 				return errors.Join(ErrLoadHostsFile, err)
 			}
+			hostsMap := hosts.Map()
+			logger.Log.Debug("loaded hosts file", "map", hostsMap)
 
 			sigCtx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 			defer cancel()
@@ -145,7 +147,7 @@ func main() {
 				IPMode:    ipMode,
 				SpoofMode: spoofMode,
 				Scope:     scope,
-				Hosts:     hosts.Map(),
+				Hosts:     hostsMap,
 				Queue:     queue,
 				Log:       logger.Log,
 			})

@@ -62,21 +62,21 @@ func Parse(ctx context.Context, r io.Reader) (*Hosts, error) {
 		if len(fields) < 2 {
 			return nil, fmt.Errorf("%w: line %d", ErrMissingHostnamePattern, lineno)
 		}
-		if len(fields) > 2 {
-			return nil, fmt.Errorf("%w: line %d", ErrAlias, lineno)
-		}
+
 		ipStr := fields[0]
-		pattern := fields[1]
 		ip := net.ParseIP(ipStr)
 		if ip == nil {
 			return nil, fmt.Errorf("%w: line %d", ErrInvalidIP, lineno)
 		}
-		pattern = strings.ToLower(strings.TrimSpace(pattern))
-		if pattern == "" {
-			return nil, fmt.Errorf("%w: line %d", ErrEmptyHostname, lineno)
+
+		for _, rawPattern := range fields[1:] {
+			pattern := strings.ToLower(strings.TrimSpace(rawPattern))
+			if pattern == "" {
+				return nil, fmt.Errorf("%w: line %d", ErrEmptyHostname, lineno)
+			}
+			log.Debug("loaded entry", "ip", ip, "pattern", pattern)
+			h.Entries = append(h.Entries, Entry{IP: ip, Pattern: pattern})
 		}
-		log.Debug("loaded entry", "ip", ip, "pattern", pattern)
-		h.Entries = append(h.Entries, Entry{IP: ip, Pattern: pattern})
 	}
 	if err := sc.Err(); err != nil {
 		return nil, err
@@ -106,9 +106,25 @@ func (h *Hosts) Map() map[*regexp.Regexp][]net.IP {
 	if h == nil {
 		return out
 	}
+
+	regexCache := make(map[string]*regexp.Regexp)
+
 	for _, e := range h.Entries {
-		pattern := regexp.MustCompile("^" + strings.ReplaceAll(regexp.QuoteMeta(e.Pattern), `\*`, ".*") + "$")
-		out[pattern] = append(out[pattern], e.IP)
+		rx, ok := regexCache[e.Pattern]
+		if !ok {
+			rx = regexp.MustCompile(
+				"^" +
+					strings.ReplaceAll(
+						regexp.QuoteMeta(e.Pattern),
+						`\*`,
+						".*",
+					) +
+					"$",
+			)
+			regexCache[e.Pattern] = rx
+		}
+		out[rx] = append(out[rx], e.IP)
 	}
+
 	return out
 }

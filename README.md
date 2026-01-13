@@ -69,16 +69,19 @@ sudo setcap cap_net_admin=+ep ./dnsspoofer
 
 ## Hosts File
 
-* One IP + hostname per line
+* hosts(5) format
 * `*` wildcards supported
 * `#` for comments
-* Last match wins
 
 ```
-192.168.1.100 example.com
-10.0.0.50 *.ads.example.net
+192.168.2.101 example.com *.example.com
+fe80::20c:29ff:fe31:d39b example.com *.example.com # IPv6 Address
 ```
 
+### Result
+```go
+map["^example\.com$":["192.168.2.101", "fe80::20c:29ff:fe31:d39b"], "^.*\.example\.com$":["192.168.2.101", "fe80::20c:29ff:fe31:d39b"]]
+```
 ---
 
 ## Go API
@@ -88,13 +91,16 @@ sudo setcap cap_net_admin=+ep ./dnsspoofer
 ```go
 iface, _ := net.InterfaceByName("eth0")
 
+host := regexp.MustCompile(`^example\.com\.$`)
+ip := net.ParseIP("10.0.0.123")
+
 engine := dnsspoofer.New(&dnsspoofer.EngineOptions{
     Iface: iface,
     IPMode: dnsspoofer.IPv4AndIPv6,
     SpoofMode: dnsspoofer.Passive,
     Scope: dnsspoofer.Remote,
     Hosts: dnsspoofer.Hosts{
-        "example.com.": {net.ParseIP("10.0.0.123")},
+        host: []net.IP{ip},
     },
     Queue: 0,
 })

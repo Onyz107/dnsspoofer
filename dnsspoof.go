@@ -88,11 +88,11 @@ func (e *Engine) Run(ctx context.Context) error {
 			var ips []net.IP
 			for re, ipaddrs := range e.opts.Hosts {
 				if re.MatchString(name) {
-					ips = ipaddrs // Use the last matching entry
+					ips = append(ips, ipaddrs...)
 				}
 			}
 			if len(ips) == 0 {
-				logger.Log.Info("parsed packet not in whitelist, skipping")
+				logger.Log.Info("parsed packet not in hosts list, skipping")
 				nfq.SetVerdict(pkt.PacketID, gonfqueue.NfAccept)
 				continue
 			}
