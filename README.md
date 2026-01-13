@@ -73,6 +73,8 @@ sudo setcap cap_net_admin=+ep ./dnsspoofer
 * `*` wildcards supported
 * `#` for comments
 
+### Example
+
 ```
 192.168.2.101 example.com *.example.com
 fe80::20c:29ff:fe31:d39b example.com *.example.com # IPv6 Address
