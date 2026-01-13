@@ -14,6 +14,7 @@ import (
 	"golang.org/x/sys/unix"
 )
 
+// New creates a new DNS spoofing engine with the provided options.
 func New(opts *EngineOptions) *Engine {
 	if opts.Log == nil {
 		opts.Log = new(logger.NopLogger)
@@ -24,6 +25,7 @@ func New(opts *EngineOptions) *Engine {
 	return engine
 }
 
+// Run starts the DNS spoofing engine.
 func (e *Engine) Run(ctx context.Context) error {
 	inCtx, cancel := context.WithCancel(ctx)
 	e.ctx = logger.WithLogger(inCtx, e.opts.Log)
@@ -125,6 +127,7 @@ func (e *Engine) Run(ctx context.Context) error {
 	}
 }
 
+// Stop stops the DNS spoofing engine.
 func (e *Engine) Stop() {
 	if e.cancel != nil {
 		e.cancel()
