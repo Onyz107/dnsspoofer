@@ -18,12 +18,6 @@ type ctxKey struct{}
 // NopLogger satisfies the Logger interface.
 type NopLogger struct{}
 
-func (NopLogger) Debug(msg any, args ...any)        {}
-func (NopLogger) Info(msg any, args ...any)         {}
-func (NopLogger) Error(msg any, args ...any)        {}
-func (NopLogger) Debugf(format string, args ...any) {}
-func (NopLogger) Errorf(format string, args ...any) {}
-
 func WithLogger(ctx context.Context, l Logger) context.Context {
 	return context.WithValue(ctx, ctxKey{}, l)
 }
