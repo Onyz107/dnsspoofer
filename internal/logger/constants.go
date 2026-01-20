@@ -26,5 +26,5 @@ func LoggerFrom(ctx context.Context) Logger {
 	if l, ok := ctx.Value(ctxKey{}).(Logger); ok {
 		return l
 	}
-	return NopLogger{}
+	return new(NopLogger)
 }

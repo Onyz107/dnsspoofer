@@ -132,15 +132,15 @@ func main() {
 
 			queue := uint16(opts.QueueInt)
 
-			hosts, err := wildhosts.LoadFile(context.TODO(), opts.Hosts)
+			sigCtx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+			defer cancel()
+
+			hosts, err := wildhosts.LoadFile(logger.WithLogger(sigCtx, logger.Log), opts.Hosts)
 			if err != nil {
 				return errors.Join(ErrLoadHostsFile, err)
 			}
 			hostsMap := hosts.Map()
 			logger.Log.Debug("loaded hosts file", "map", hostsMap)
-
-			sigCtx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-			defer cancel()
 
 			spoof := dnsspoofer.New(&dnsspoofer.EngineOptions{
 				Iface:     ifaceHandle,

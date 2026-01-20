@@ -94,7 +94,7 @@ func (e *Engine) Run(ctx context.Context) error {
 				}
 			}
 			if len(ips) == 0 {
-				logger.Log.Info("parsed packet not in hosts list, skipping")
+				e.opts.Log.Info("parsed packet not in hosts list, skipping")
 				nfq.SetVerdict(pkt.PacketID, gonfqueue.NfAccept)
 				continue
 			}
